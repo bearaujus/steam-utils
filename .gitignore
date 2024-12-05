@@ -9,6 +9,7 @@
 *.dylib
 **/.idea
 **/.DS_Store
+dev/
 
 # Test binary, built with `go test -c`
 *.test
