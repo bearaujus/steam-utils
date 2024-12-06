@@ -1,4 +1,4 @@
-package library
+package set_auto_update
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 func NewCommands(ctx context.Context, config *config.Config) []*cobra.Command {
 	return []*cobra.Command{
-		newSetAutoUpdateCmd(ctx, config),
+		new0Cmd(ctx, config),
+		new1Cmd(ctx, config),
 	}
 }

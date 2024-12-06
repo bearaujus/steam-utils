@@ -13,8 +13,7 @@ func newLibraryCmd(ctx context.Context, config *config.Config) *cobra.Command {
 		Short: "Steam library utilities",
 		Args:  cobra.NoArgs,
 	}
-	cmd.SetContext(ctx)
-	for _, childCmd := range library.NewLibraryCommands(ctx, config) {
+	for _, childCmd := range library.NewCommands(ctx, config) {
 		cmd.AddCommand(childCmd)
 	}
 	return cmd

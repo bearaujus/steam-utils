@@ -6,10 +6,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func New(ctx context.Context, config *config.Config) *cobra.Command {
+func NewCommand(ctx context.Context, config *config.Config) *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:   "steam-utils",
-		Short: "A brief description of your application",
+		Short: "Sets of utilities for managing your Steam",
 		Args:  cobra.NoArgs,
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd:   true,
@@ -18,7 +18,6 @@ func New(ctx context.Context, config *config.Config) *cobra.Command {
 			HiddenDefaultCmd:    true,
 		},
 	}
-	rootCmd.SetContext(ctx)
 	rootCmd.AddCommand(newLibraryCmd(ctx, config))
 	return rootCmd
 }
