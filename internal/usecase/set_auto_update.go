@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bearaujus/steam-utils/internal/config"
 	"github.com/bearaujus/steam-utils/internal/model"
+	"github.com/bearaujus/steam-utils/internal/pkg"
 	"github.com/bearaujus/steam-utils/pkg/steam_acf"
 	"github.com/bearaujus/steam-utils/pkg/steam_path"
 	"github.com/spf13/cobra"
@@ -14,7 +15,7 @@ import (
 	"strings"
 )
 
-func NewSetAutoUpdate(ctx context.Context, cfg *config.Config) CmdRunner {
+func NewSetAutoUpdate(_ context.Context, cfg *config.Config) CmdRunner {
 	return func(cmd *cobra.Command, args []string) error {
 		se, err := steam_path.NewSteamPath(cfg.SteamPath)
 		if err != nil {
@@ -25,48 +26,52 @@ func NewSetAutoUpdate(ctx context.Context, cfg *config.Config) CmdRunner {
 		}
 		files, err := os.ReadDir(se.SteamApps())
 		if err != nil {
-			return fmt.Errorf("error reading directory: %v", err)
+			return model.ErrReadDirectory.New(err)
 		}
-		var totalUpdate int
-		var totalUpdateTarget int
-		fmt.Println("-------------------------------------------------------------")
+		var totalUpdate, totalUpdateTarget int
+		pkg.PrintSep()
 		for _, file := range files {
 			if file.IsDir() {
 				continue
 			}
 			if strings.HasSuffix(file.Name(), ".acf") {
 				totalUpdateTarget++
-				filename := filepath.Join(se.SteamApps(), file.Name())
-				data, err := os.ReadFile(filename)
+				fileName := filepath.Join(se.SteamApps(), file.Name())
+				data, err := os.ReadFile(fileName)
 				if err != nil {
-					return err
+					return model.ErrReadFile.New(err)
 				}
 				sa, err := steam_acf.Parse(data)
 				if err != nil {
-					return err
+					return model.ErrParseSteamACFFile.New(err)
 				}
-				previousValue, err := sa.Update([]string{"AppState", "AutoUpdateBehavior"}, cmd.Use)
+				appName, err := sa.Get([]string{"AppState", "name"})
 				if err != nil {
-					return err
+					return model.ErrGetValueFromSteamACFFile.New(err)
+				}
+				fmt.Printf("Index\t: %v\nName\t: %v\nFile\t: %v\n", totalUpdateTarget, appName, fileName)
+				var updateTargets = []string{"AppState", "AutoUpdateBehavior"}
+				previousValue, err := sa.Update(updateTargets, cmd.Use)
+				if err != nil {
+					return model.ErrUpdateValueFromSteamACFFile.New(err)
 				}
 				if previousValue == cmd.Use {
-					fmt.Printf("File %v has already same configuration. Skipping...\n", filename)
-					fmt.Println("-------------------------------------------------------------")
+					fmt.Println("Action\t: No changes made. The file is already configured and up-to-date.")
+					pkg.PrintSep()
 					continue
 				}
-				fmt.Printf("Updating %v...\n", filename)
-				err = os.WriteFile(filename, sa.Serialize(), os.ModePerm)
+				err = os.WriteFile(fileName, sa.Serialize(), os.ModePerm)
 				if err != nil {
-					return err
+					return model.ErrWriteFile.New(err)
 				}
 				totalUpdate++
-				fmt.Printf("Changed %v -> %v\n", previousValue, cmd.Use)
-				fmt.Println("-------------------------------------------------------------")
+				fmt.Printf("Action\t: Updated %v from \"%v\" to \"%v\".\n", strings.Join(updateTargets, "."), previousValue, cmd.Use)
+				pkg.PrintSep()
 			}
 		}
-		msg := fmt.Sprintf("Sucessfully updated [%v/%v] files!\n", totalUpdate, totalUpdateTarget)
+		msg := fmt.Sprintf("Successfully updated %d out of %d files!\n", totalUpdate, totalUpdateTarget)
 		if totalUpdate == 0 {
-			msg = "No file were updated"
+			msg = "No files were updated."
 		}
 		fmt.Println(msg)
 		return nil

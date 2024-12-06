@@ -56,12 +56,12 @@ func LoadDefaultSteamPath() (SteamPath, error) {
 	switch runtime.GOOS {
 	case "windows":
 		targetPath := []string{
-			`Program Files (x86)\Steam`,
-			`Program Files\Steam`,
+			`Program Files (x86)/Steam`,
+			`Program Files/Steam`,
 		}
 		for _, drive := range windowsListAvailableDrives() {
 			for _, dir := range targetPath {
-				paths = append(paths, drive+dir)
+				paths = append(paths, path.Join(drive, dir))
 			}
 		}
 	case "linux":
@@ -91,7 +91,7 @@ func LoadDefaultSteamPath() (SteamPath, error) {
 func windowsListAvailableDrives() []string {
 	var drives []string
 	for letter := 'A'; letter <= 'Z'; letter++ {
-		drive := fmt.Sprintf("%c:\\", letter)
+		drive := fmt.Sprintf("%c:/", letter)
 		if _, err := os.Stat(drive); err == nil {
 			drives = append(drives, drive)
 		}

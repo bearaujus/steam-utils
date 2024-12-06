@@ -31,24 +31,31 @@ type steamACF struct {
 }
 
 func Parse(data []byte) (SteamACF, error) {
+	if strings.TrimSpace(string(data)) == "" {
+		return nil, ErrEmptyData
+	}
 	parsedSteamACFData, err := parseRecursive(bufio.NewScanner(bytes.NewReader(data)))
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(ErrParseData, err)
 	}
 	return &steamACF{data: parsedSteamACFData}, nil
 }
 
 func (sa *steamACF) Get(target []string) (string, error) {
-	return "", errors.New("Not implemented")
+	ret, err := getRecursive(sa.data, target, nil)
+	if err != nil {
+		return "", errors.Join(ErrGetData, err)
+	}
+	return string(ret), nil
 }
 
-func (sa *steamACF) Update(target []string, value string) (string, error) {
-	if !writeRegex.MatchString(value) {
-		return "", fmt.Errorf("invalid value: value match with regex %v", writeRegex.String())
+func (sa *steamACF) Update(target []string, replacement string) (string, error) {
+	if !writeRegex.MatchString(replacement) {
+		return "", fmt.Errorf("invalid update value")
 	}
-	previousValue, updatedData, err := updateRecursive(sa.data, target, value, nil)
+	previousValue, updatedData, err := updateRecursive(sa.data, target, replacement, nil)
 	if err != nil {
-		return "", err
+		return "", errors.Join(ErrUpdateData, err)
 	}
 	sa.data = updatedData
 	return fmt.Sprint(previousValue), nil
@@ -108,36 +115,35 @@ func parseRecursive(scanner *bufio.Scanner) (map[string]interface{}, error) {
 	return data, nil
 }
 
-// TODO finish
-//func getRecursive(data map[string]interface{}, tk []string, ptk []string) ([]byte, error) {
-//	if len(tk) == 0 {
-//		return serializeRecursive(data, serializeRecursiveIndent, serializeRecursiveKeyValIndent), nil
-//	}
-//	targetKey := tk[0]
-//	ptk = append(ptk, targetKey)
-//	dataValue, hasChild := data[targetKey]
-//	if !hasChild {
-//		return nil, fmt.Errorf("target key '%v' is not found", strings.Join(ptk, "."))
-//	}
-//	_, isMap := dataValue.(map[string]interface{})
-//	if len(tk) != 1 {
-//		if !isMap {
-//			return nil, fmt.Errorf("target key '%v' is not found", strings.Join(append(ptk, tk[1]), "."))
-//		}
-//		var err error
-//		dataValue, err = getRecursive(dataValue.(map[string]interface{}), tk[1:], ptk)
-//		if err != nil {
-//			return nil, err
-//		}
-//		return dataValue, nil
-//	}
-//	if isMap {
-//		return serializeRecursive(dataValue.(map[string]interface{}), serializeRecursiveIndent, serializeRecursiveKeyValIndent), nil
-//	}
-//	return []byte(fmt.Sprintf(dataValue)), nil
-//}
+func getRecursive(data map[string]interface{}, tk []string, ptk []string) ([]byte, error) {
+	if len(tk) == 0 {
+		return serializeRecursive(data, serializeRecursiveIndent, serializeRecursiveKeyValIndent), nil
+	}
+	targetKey := tk[0]
+	ptk = append(ptk, targetKey)
+	dataValue, ok := data[targetKey]
+	if !ok {
+		return nil, fmt.Errorf("target key '%v' is not found", strings.Join(ptk, "."))
+	}
+	_, isMap := dataValue.(map[string]interface{})
+	if len(tk) != 1 {
+		if !isMap {
+			return nil, fmt.Errorf("target key '%v' is value", strings.Join(append(ptk, tk[1]), "."))
+		}
+		var err error
+		ret, err := getRecursive(dataValue.(map[string]interface{}), tk[1:], ptk)
+		if err != nil {
+			return nil, err
+		}
+		return ret, nil
+	}
+	if isMap {
+		return serializeRecursive(dataValue.(map[string]interface{}), serializeRecursiveIndent, serializeRecursiveKeyValIndent), nil
+	}
+	return []byte(fmt.Sprint(dataValue)), nil
+}
 
-func updateRecursive(data map[string]interface{}, tk []string, value string, ptk []string) (interface{}, map[string]interface{}, error) {
+func updateRecursive(data map[string]interface{}, tk []string, replacement string, ptk []string) (interface{}, map[string]interface{}, error) {
 	if len(tk) == 0 {
 		return nil, nil, errors.New("target keys is empty")
 	}
@@ -153,7 +159,7 @@ func updateRecursive(data map[string]interface{}, tk []string, value string, ptk
 			return nil, nil, fmt.Errorf("target key '%v' is not found", strings.Join(append(ptk, tk[1]), "."))
 		}
 		var err error
-		dataValue, data[targetKey], err = updateRecursive(dataValue.(map[string]interface{}), tk[1:], value, ptk)
+		dataValue, data[targetKey], err = updateRecursive(dataValue.(map[string]interface{}), tk[1:], replacement, ptk)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -162,7 +168,7 @@ func updateRecursive(data map[string]interface{}, tk []string, value string, ptk
 	if isMap {
 		return nil, nil, fmt.Errorf("target key '%v' is not a value", strings.Join(ptk, "."))
 	}
-	data[targetKey] = value
+	data[targetKey] = replacement
 	return dataValue, data, nil
 }
 
