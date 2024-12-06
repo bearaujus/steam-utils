@@ -7,12 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func new0Cmd(ctx context.Context, config *config.Config) *cobra.Command {
+func new0Cmd(ctx context.Context, cfg *config.Config) *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "0",
 		Short: "Always keep your Steam library updated",
 		Args:  cobra.NoArgs,
-		RunE:  usecase.NewSetAutoUpdate(ctx, config),
+		RunE:  usecase.NewSetAutoUpdate(ctx, cfg),
 	}
 	return cmd
 }

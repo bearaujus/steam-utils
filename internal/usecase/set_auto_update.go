@@ -37,28 +37,23 @@ func NewSetAutoUpdate(ctx context.Context, cfg *config.Config) CmdRunner {
 			if strings.HasSuffix(file.Name(), ".acf") {
 				totalUpdateTarget++
 				filename := filepath.Join(se.SteamApps(), file.Name())
-
 				data, err := os.ReadFile(filename)
 				if err != nil {
 					return err
 				}
-
 				sa, err := steam_acf.Parse(data)
 				if err != nil {
 					return err
 				}
-
 				previousValue, err := sa.Update([]string{"AppState", "AutoUpdateBehavior"}, cmd.Use)
 				if err != nil {
 					return err
 				}
-
 				if previousValue == cmd.Use {
 					fmt.Printf("File %v has already same configuration. Skipping...\n", filename)
 					fmt.Println("-------------------------------------------------------------")
 					continue
 				}
-
 				fmt.Printf("Updating %v...\n", filename)
 				err = os.WriteFile(filename, sa.Serialize(), os.ModePerm)
 				if err != nil {
@@ -69,7 +64,11 @@ func NewSetAutoUpdate(ctx context.Context, cfg *config.Config) CmdRunner {
 				fmt.Println("-------------------------------------------------------------")
 			}
 		}
-		fmt.Printf("Updated [%v/%v] files\n", totalUpdate, totalUpdateTarget)
+		msg := fmt.Sprintf("Sucessfully updated [%v/%v] files!\n", totalUpdate, totalUpdateTarget)
+		if totalUpdate == 0 {
+			msg = "No file were updated"
+		}
+		fmt.Println(msg)
 		return nil
 	}
 }

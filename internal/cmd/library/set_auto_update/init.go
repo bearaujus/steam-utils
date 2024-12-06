@@ -6,9 +6,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewCommands(ctx context.Context, config *config.Config) []*cobra.Command {
+func NewCommands(ctx context.Context, cfg *config.Config) []*cobra.Command {
 	return []*cobra.Command{
-		new0Cmd(ctx, config),
-		new1Cmd(ctx, config),
+		new0Cmd(ctx, cfg),
+		new1Cmd(ctx, cfg),
 	}
 }
