@@ -33,7 +33,6 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-
 	pkg.PrintTitle(cfg)
 	_ = rootCLI.Execute()
 	fmt.Println()
