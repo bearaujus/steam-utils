@@ -1,12 +1,13 @@
-package cmd
+package cli
 
 import (
 	"context"
+	"github.com/bearaujus/steam-utils/internal/cli/library"
 	"github.com/bearaujus/steam-utils/internal/config"
 	"github.com/spf13/cobra"
 )
 
-func NewCommand(ctx context.Context, cfg *config.Config) *cobra.Command {
+func NewRoot(ctx context.Context, cfg *config.Config) *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:   "steam-utils",
 		Short: "Sets of utilities for managing your Steam",
@@ -20,4 +21,16 @@ func NewCommand(ctx context.Context, cfg *config.Config) *cobra.Command {
 	}
 	rootCmd.AddCommand(newLibraryCmd(ctx, cfg))
 	return rootCmd
+}
+
+func newLibraryCmd(ctx context.Context, cfg *config.Config) *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "library",
+		Short: "Steam library utilities",
+		Args:  cobra.NoArgs,
+	}
+	for _, childCmd := range library.New(ctx, cfg) {
+		cmd.AddCommand(childCmd)
+	}
+	return cmd
 }
