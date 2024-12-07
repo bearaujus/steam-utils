@@ -52,6 +52,7 @@ jobs:
             # Set environment variables
             export GOOS
             export GOARCH
+            export CGO_ENABLED=1
 
             # Build the binary with the required format and ldflags for version, name, arch, and goos
             FILENAME="${REPO_NAME}-${VERSION}-${GOOS}-${GOARCH}"
