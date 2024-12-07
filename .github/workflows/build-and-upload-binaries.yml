@@ -23,7 +23,7 @@ jobs:
       - name: Install build tools for cgo
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc g++ libc6-dev gcc-multilib g++-x86-64-linux-gnu libc6-dev-amd64-cross gcc-arm-linux-gnueabi gcc-arm-linux-gnueabihf
+          sudo apt-get install -y gcc g++ libc6-dev gcc-multilib g++-x86-64-linux-gnu libc6-dev-amd64-cross
 
       # Get the version from the tag
       - name: Get version from tag
