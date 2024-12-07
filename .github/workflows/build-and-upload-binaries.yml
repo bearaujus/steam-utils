@@ -33,6 +33,12 @@ jobs:
           REPO_NAME=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2)
           echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_ENV
 
+      # Install dependencies for cgo (for android, aix, etc.)
+      - name: Install dependencies for cgo (if needed)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc libc6-dev
+
       # Build binaries for all GOOS and GOARCH combinations
       - name: Build binaries
         run: |
