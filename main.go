@@ -13,10 +13,11 @@ var (
 	version string // main.version
 	arch    string // main.arch
 	goos    string // main.goos
+	file    string // main.file
 )
 
 func main() {
-	fmt.Println(name, version, arch, goos)
+	fmt.Println(name, version, arch, goos, file)
 	cfg := &config.Config{}
 	var rootCLI = cli.NewRoot(context.TODO(), cfg)
 	err := config.LoadConfig(rootCLI, cfg)

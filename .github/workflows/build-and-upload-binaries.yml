@@ -8,7 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       # Checkout the code
       - name: Checkout code
@@ -20,43 +19,74 @@ jobs:
         with:
           go-version: '1.21'  # Set the Go version you're using
 
+      # Install necessary build tools for cgo
+      - name: Install build tools for cgo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ libc6-dev gcc-multilib g++-x86-64-linux-gnu libc6-dev-amd64-cross
+
       # Get the version from the tag
       - name: Get version from tag
         id: get_version
         run: |
           echo "VERSION=$(echo ${GITHUB_REF} | sed 's/refs\/tags\///')" >> $GITHUB_ENV
 
-      # Get the repository name from the GitHub context (e.g., steam-utils from bearaujus/steam-utils)
+      # Get the repository name from the GitHub context (e.g., steam-utils from github.com/bearaujus/steam-utils)
       - name: Get repo name
         id: get_repo_name
         run: |
           REPO_NAME=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2)
           echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_ENV
 
-      # Build binaries for all GOOS and GOARCH combinations
+      # Build binaries only if tag is new
       - name: Build binaries
+        if: env.skip != 'true'
         run: |
-          # List of GOOS and GOARCH combinations
-          GOOS_ARCH_LIST=$(go tool dist list)
+          # Define a specific list of GOOS and GOARCH combinations
+          GOOS_ARCH_LIST=(
+            "windows/386"
+            "windows/amd64"
+            "windows/arm"
+            "windows/arm64"
+            "linux/386"
+            "linux/amd64"
+            "linux/arm"
+            "linux/arm64"
+            "darwin/amd64"
+            "darwin/arm64"
+          )
+
           VERSION=${{ env.VERSION }}
           REPO_NAME=${{ env.REPO_NAME }}
-          
+
           # Create a directory for the build outputs
           mkdir -p binaries
 
           # Loop through the GOOS and GOARCH combinations and build binaries
-          for GOOS_ARCH in $GOOS_ARCH_LIST; do
+          for GOOS_ARCH in "${GOOS_ARCH_LIST[@]}"; do
             GOOS=$(echo $GOOS_ARCH | cut -d'/' -f1)
             GOARCH=$(echo $GOOS_ARCH | cut -d'/' -f2)
-
+          
+            # Disable cgo for ARM builds
+            if [[ "$GOARCH" == "arm" || "$GOARCH" == "arm64" || "$GOOS" == "windows" ]]; then
+              export CGO_ENABLED=0
+            else
+              export CGO_ENABLED=1
+            fi
+          
             # Set environment variables
             export GOOS
             export GOARCH
-
-            # Build the binary with the required format and ldflags for version, name, arch, and goos
+          
+            # Construct the filename and add .exe for Windows
             FILENAME="${REPO_NAME}-${VERSION}-${GOOS}-${GOARCH}"
-            go build -ldflags "-X main.name=${REPO_NAME} -X main.version=${VERSION} -X main.arch=${GOARCH} -X main.goos=${GOOS}" -o "binaries/${FILENAME}"
-
+            if [[ "$GOOS" == "windows" ]]; then
+              FILENAME="${FILENAME}.exe"
+            fi
+          
+            # Build the binary with the required format and ldflags for version, name, arch, and goos
+            go build -ldflags "-X main.name=${REPO_NAME} -X main.version=${VERSION} -X main.arch=${GOARCH} -X main.goos=${GOOS} -X main.file=${FILENAME}" -o "binaries/${FILENAME}"
+          
             echo "Built binary: ${FILENAME}"
           done
 
