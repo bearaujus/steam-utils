@@ -7,6 +7,10 @@
 *.dll
 *.so
 *.dylib
+**/.idea
+**/.DS_Store
+dev
+bin
 
 # Test binary, built with `go test -c`
 *.test
