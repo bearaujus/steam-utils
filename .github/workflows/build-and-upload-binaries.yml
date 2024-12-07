@@ -55,18 +55,18 @@ jobs:
             "darwin/amd64"
             "darwin/arm64"
           )
-          
+
           VERSION=${{ env.VERSION }}
           REPO_NAME=${{ env.REPO_NAME }}
-          
+
           # Create a directory for the build outputs
           mkdir -p binaries
-          
+
           # Loop through the GOOS and GOARCH combinations and build binaries
           for GOOS_ARCH in "${GOOS_ARCH_LIST[@]}"; do
             GOOS=$(echo $GOOS_ARCH | cut -d'/' -f1)
             GOARCH=$(echo $GOOS_ARCH | cut -d'/' -f2)
-
+          
             # Disable cgo for ARM builds
             if [[ "$GOARCH" == "arm" || "$GOARCH" == "arm64" || "$GOOS" == "windows" ]]; then
               export CGO_ENABLED=0
@@ -74,19 +74,18 @@ jobs:
               export CGO_ENABLED=1
             fi
           
-            # Skip problematic platforms if necessary (e.g., AIX or others)
-            if [[ "$GOOS" == "aix" && "$GOARCH" == "ppc64" ]]; then
-              echo "Skipping aix/ppc64 due to unsupported platform"
-              continue
-            fi
-          
             # Set environment variables
             export GOOS
             export GOARCH
           
-            # Build the binary with the required format and ldflags for version, name, arch, and goos
+            # Construct the filename and add .exe for Windows
             FILENAME="${REPO_NAME}-${VERSION}-${GOOS}-${GOARCH}"
-            go build -ldflags "-X main.name=${REPO_NAME} -X main.version=${VERSION} -X main.arch=${GOARCH} -X main.goos=${GOOS}" -o "binaries/${FILENAME}"
+            if [[ "$GOOS" == "windows" ]]; then
+              FILENAME="${FILENAME}.exe"
+            fi
+          
+            # Build the binary with the required format and ldflags for version, name, arch, and goos
+            go build -ldflags "-X main.name=${REPO_NAME} -X main.version=${VERSION} -X main.arch=${GOARCH} -X main.goos=${GOOS} -X main.file=${FILENAME}" -o "binaries/${FILENAME}"
           
             echo "Built binary: ${FILENAME}"
           done
