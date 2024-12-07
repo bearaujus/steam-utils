@@ -9,8 +9,8 @@ import (
 
 func NewRoot(ctx context.Context, cfg *config.Config) *cobra.Command {
 	var rootCmd = &cobra.Command{
-		Use:   "steam-utils",
-		Short: "Sets of utilities for managing your Steam",
+		Use:   cfg.LdFlags.Name,
+		Short: "Steam utilities",
 		Args:  cobra.NoArgs,
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd:   true,
