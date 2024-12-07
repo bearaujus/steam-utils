@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bearaujus/steam-utils/internal/cli"
 	"github.com/bearaujus/steam-utils/internal/config"
+	"github.com/bearaujus/steam-utils/internal/pkg"
 )
 
 // these variable will be retrieved from -ldflags
@@ -17,13 +18,23 @@ var (
 )
 
 func main() {
-	fmt.Println(name, version, arch, goos, file)
-	cfg := &config.Config{}
-	var rootCLI = cli.NewRoot(context.TODO(), cfg)
-	err := config.LoadConfig(rootCLI, cfg)
-	if err != nil {
+	var (
+		cfg = config.NewConfig(&config.LdFlags{
+			Name:    name,
+			Version: version,
+			Arch:    arch,
+			Goos:    goos,
+			File:    file,
+		})
+		ctx     = context.TODO()
+		rootCLI = cli.NewRoot(ctx, cfg)
+	)
+	if err := config.LoadConfig(rootCLI, cfg); err != nil {
 		fmt.Println(err)
 		return
 	}
+
+	pkg.PrintTitle(cfg)
 	_ = rootCLI.Execute()
+	fmt.Println()
 }

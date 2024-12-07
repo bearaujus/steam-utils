@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func NewCmdRunner(_ context.Context, cfg *config.Config) usecase.CmdRunner {
@@ -31,68 +32,67 @@ func NewCmdRunner(_ context.Context, cfg *config.Config) usecase.CmdRunner {
 			return model.ErrReadDirectory.New(err)
 		}
 
-		var (
-			aodwrUpdate, totalUpdate int
-			aodwrTargets             = []string{"AppState", "AllowOtherDownloadsWhileRunning"}
-			aodwrTargetsName         = strings.Join(aodwrTargets, ".")
-		)
-		pkg.PrintSep()
+		var fileTargets []os.DirEntry
 		for _, file := range files {
-			if file.IsDir() {
-				continue
-			}
-			if strings.HasSuffix(strings.ToLower(file.Name()), ".acf") {
-				totalUpdate++
-				fileName := filepath.Join(se.SteamApps(), file.Name())
-
-				data, err := os.ReadFile(fileName)
-				if err != nil {
-					return model.ErrReadFile.New(err)
-				}
-
-				sa, err := steam_acf.Parse(data)
-				if err != nil {
-					return model.ErrParseSteamACFFile.New(err)
-				}
-
-				appName, err := sa.Get([]string{"AppState", "name"})
-				if err != nil {
-					return model.ErrGetValueFromSteamACFFile.New(err)
-				}
-
-				fmt.Printf("Index\t: %v\nName\t: %v\nFile\t: %v\n", totalUpdate, appName, fileName)
-				var aodwrPrevious string
-				aodwrPrevious, err = sa.Update(aodwrTargets, cmd.Use)
-				if err != nil {
-					return model.ErrUpdateValueFromSteamACFFile.New(err)
-				}
-
-				if aodwrPrevious != cmd.Use {
-					err = os.WriteFile(fileName, sa.Serialize(), os.ModePerm)
-					if err != nil {
-						return model.ErrWriteFile.New(err)
-					}
-				}
-				if aodwrPrevious == cmd.Use {
-					fmt.Printf("Action\t: No changes made. %v is already configured and up-to-date\n", aodwrTargetsName)
-				} else {
-					fmt.Printf("Action\t: Updated %v from %v -> %v\n", aodwrTargetsName, aodwrPrevious, cmd.Use)
-					aodwrUpdate++
-				}
-
-				pkg.PrintSep()
+			if !file.IsDir() && strings.HasSuffix(strings.ToLower(file.Name()), ".acf") {
+				fileTargets = append(fileTargets, file)
 			}
 		}
 
-		msg := fmt.Sprintf("Successfully updated %v: %d out of %d", aodwrTargetsName, aodwrUpdate, totalUpdate)
+		if len(fileTargets) == 0 {
+			fmt.Printf("No .acf files detected in %v directory. Ensure that you have installed applications in your Steam library and try again.\n", se.SteamApps())
+			return nil
+		}
+
+		var (
+			aodwrUpdate      int
+			aodwrTargets     = []string{"AppState", "AllowOtherDownloadsWhileRunning"}
+			aodwrTargetsName = strings.Join(aodwrTargets, ".")
+			bar              = pkg.NewProgressBar(len(fileTargets), cmd.Short)
+		)
+		for _, file := range fileTargets {
+			time.Sleep(time.Millisecond * 50)
+			fileName := filepath.Join(se.SteamApps(), file.Name())
+			data, err := os.ReadFile(fileName)
+			if err != nil {
+				return model.ErrReadFile.New(err)
+			}
+
+			sa, err := steam_acf.Parse(data)
+			if err != nil {
+				return model.ErrParseSteamACFFile.New(err)
+			}
+
+			appName, err := sa.Get([]string{"AppState", "name"})
+			if err != nil {
+				return model.ErrGetValueFromSteamACFFile.New(err)
+			}
+			bar.Add(appName)
+
+			var aodwrPrevious string
+			aodwrPrevious, err = sa.Update(aodwrTargets, cmd.Use)
+			if err != nil {
+				return model.ErrUpdateValueFromSteamACFFile.New(err)
+			}
+
+			if aodwrPrevious != cmd.Use {
+				err = os.WriteFile(fileName, sa.Serialize(), os.ModePerm)
+				if err != nil {
+					return model.ErrWriteFile.New(err)
+				}
+				aodwrUpdate++
+			}
+		}
+
+		bar.Finish()
+		msg := fmt.Sprintf("Successfully updated %v: %d out of %d", aodwrTargetsName, aodwrUpdate, len(fileTargets))
 		if aodwrUpdate == 0 {
 			msg = fmt.Sprintf("No files were updated for %v", aodwrTargetsName)
 		}
 		fmt.Println(msg)
 
-		pkg.PrintSep()
-		fmt.Printf("Applied\t: %v - %v\n", cmd.Use, cmd.Short)
 		if aodwrUpdate != 0 {
+			pkg.PrintSep()
 			fmt.Println("To see the changes, please restart your Steam!")
 		}
 
