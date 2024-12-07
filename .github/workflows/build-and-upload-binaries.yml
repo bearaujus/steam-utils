@@ -67,14 +67,18 @@ jobs:
             GOOS=$(echo $GOOS_ARCH | cut -d'/' -f1)
             GOARCH=$(echo $GOOS_ARCH | cut -d'/' -f2)
           
+            # Disable cgo for windows builds (or other platforms that don't need cgo)
+            if [[ "$GOOS" == "windows" ]]; then
+              export CGO_ENABLED=0
+            else
+              export CGO_ENABLED=1
+            fi
+          
             # Skip problematic platforms if necessary (e.g., AIX or others)
             if [[ "$GOOS" == "aix" && "$GOARCH" == "ppc64" ]]; then
               echo "Skipping aix/ppc64 due to unsupported platform"
               continue
             fi
-          
-            # Enable cgo for all builds
-            export CGO_ENABLED=1
           
             # Set environment variables
             export GOOS
