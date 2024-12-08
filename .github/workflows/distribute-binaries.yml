@@ -11,28 +11,56 @@ jobs:
     steps:
       # Checkout the code
       - name: Checkout code
+        if: env.skip != 'true'
         uses: actions/checkout@v2
 
       # Set up Go environment
       - name: Set up Go
+        if: env.skip != 'true'
         uses: actions/setup-go@v3
         with:
           go-version: '1.23'
 
       # Install necessary build tools for cgo and osslsigncode
       - name: Install build tools
+        if: env.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc g++ libc6-dev gcc-multilib g++-x86-64-linux-gnu osslsigncode openssl
 
+      # Prepare the signing certificate (Generate .p12 file)
+      - name: Prepare signing certificate
+        if: env.skip != 'true'
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          REQUEST_CSR: ${{ secrets.REQUEST_CSR }}
+          SIGN_PASSWORD: ${{ secrets.SIGN_PASSWORD }}
+        run: |
+          # Decode the PRIVATE_KEY secret and save it to a file
+          echo "${PRIVATE_KEY}" > private.key
+
+          # Decode the REQUEST_CSR secret and save it to a file
+          echo "${REQUEST_CSR}" > request.csr
+
+          # Decode the SIGN_PASSWORD secret and save it to a file
+          echo "${$SIGN_PASSWORD}" > sign_password.txt
+
+          # Create the .p12 certificate using the private key and certificate (self-signed or CA-signed)
+          openssl pkcs12 -export -out certificate.p12 -inkey private.key -in request.csr -passout file:sign_password.txt
+
+          # Clean up sensitive files after use
+          rm private.key request.csr sign_password.txt
+
       # Get the version from the tag
       - name: Get version from tag
+        if: env.skip != 'true'
         id: get_version
         run: |
           echo "VERSION=$(echo ${GITHUB_REF} | sed 's/refs\/tags\///')" >> $GITHUB_ENV
 
       # Get the repository name from the GitHub context
       - name: Get repo name
+        if: env.skip != 'true'
         id: get_repo_name
         run: |
           REPO_NAME=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2)
@@ -46,39 +74,24 @@ jobs:
           GOOS_ARCH_LIST=( "windows/386" "windows/amd64" "windows/arm" "windows/arm64" )
           VERSION=${{ env.VERSION }}
           REPO_NAME=${{ env.REPO_NAME }}
-          mkdir -p binaries
+          DIST_LOCATION=dist
+          mkdir -p ${DIST_LOCATION}
           for GOOS_ARCH in "${GOOS_ARCH_LIST[@]}"; do
             GOOS=$(echo $GOOS_ARCH | cut -d'/' -f1)
             GOARCH=$(echo $GOOS_ARCH | cut -d'/' -f2)
             FILENAME="${REPO_NAME}-${VERSION}-${GOOS}-${GOARCH}.exe"
+            OUTPUT_LOCATION=${DIST_LOCATION}/${FILENAME}
             export GOOS GOARCH CGO_ENABLED=0
-            go build -ldflags "-X main.name=${REPO_NAME} -X main.version=${VERSION}" -o "binaries/${FILENAME}"
-            echo "Built binary: ${FILENAME}"
+            go build -ldflags "-X main.name=${REPO_NAME} -X main.version=${VERSION}" -o "${OUTPUT_LOCATION}"
+            echo "Built binary: ${OUTPUT_LOCATION}"
           done
-
-      # Prepare the signing certificate (Generate .p12 file)
-      - name: Prepare signing certificate
-        run: |
-          # Decode the PRIVATE_KEY secret and save it to a file
-          echo "${{ secrets.PRIVATE_KEY }}" > private.key
-
-          # Decode the REQUEST_CSR secret and save it to a file
-          echo "${{ secrets.REQUEST_CSR }}" > request.csr
-
-          # Decode the SIGN_PASSWORD secret and save it to a file
-          echo "${{ secrets.SIGN_PASSWORD }}" > sign_password.txt
-
-          # Create the .p12 certificate using the private key and certificate (self-signed or CA-signed)
-          openssl pkcs12 -export -out certificate.p12 -inkey private.key -in request.csr -passout file:sign_password.txt
-
-          # Clean up sensitive files after use
-          rm private.key request.csr sign_password.txt
 
       # Sign Windows binaries
       - name: Sign Windows binaries
+        if: env.skip != 'true'
         run: |
           mkdir -p signed
-          for FILE in binaries/*.exe; do
+          for FILE in dist/*.exe; do
             SIGNED_FILE="signed/$(basename $FILE)"
             osslsigncode sign \
               -pkcs12 certificate.p12 \
@@ -91,6 +104,7 @@ jobs:
 
       # Upload signed binaries to GitHub Releases
       - name: Upload signed binaries to release
+        if: env.skip != 'true'
         uses: softprops/action-gh-release@v1
         with:
           files: signed/*
