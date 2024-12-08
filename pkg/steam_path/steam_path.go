@@ -10,6 +10,7 @@ import (
 type SteamPath interface {
 	Base() string
 	SteamApps() string
+	String() string
 }
 
 type steamPath struct {
@@ -36,6 +37,10 @@ func (sp *steamPath) Base() string {
 
 func (sp *steamPath) SteamApps() string {
 	return path.Join(sp.basePath, "steamapps")
+}
+
+func (sp *steamPath) String() string {
+	return sp.basePath
 }
 
 func (sp *steamPath) validate() error {

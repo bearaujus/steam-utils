@@ -2,18 +2,15 @@ package config
 
 import (
 	"fmt"
-	"github.com/bearaujus/steam-utils/pkg/steam_path"
-	"github.com/spf13/cobra"
 	"runtime"
-)
 
-const (
-	PersistentFlagSteamPath = "steam-path"
+	"github.com/bearaujus/steam-utils/pkg/steam_path"
 )
 
 type Config struct {
-	SteamPath string
-	LdFlags   *LdFlags
+	SteamPath        steam_path.SteamPath
+	DefaultSteamPath steam_path.SteamPath
+	LdFlags          *LdFlags
 }
 
 type LdFlags struct {
@@ -43,17 +40,10 @@ func NewConfig(ldFlags *LdFlags) *Config {
 	if ldFlags.File == "" {
 		ldFlags.File = fmt.Sprintf("%v-%v-%v-%v", ldFlags.Name, ldFlags.Version, ldFlags.Goos, ldFlags.Arch)
 	}
-	return &Config{
-		LdFlags: ldFlags,
-	}
-}
-
-func LoadConfig(cmd *cobra.Command, config *Config) error {
-	var defaultSteamPath string
+	cfg := &Config{LdFlags: ldFlags}
 	sp, err := steam_path.LoadDefaultSteamPath()
 	if err == nil {
-		defaultSteamPath = sp.Base()
+		cfg.DefaultSteamPath = sp
 	}
-	cmd.PersistentFlags().StringVar(&config.SteamPath, PersistentFlagSteamPath, defaultSteamPath, "Path to steam installation directory")
-	return nil
+	return cfg
 }

@@ -1,0 +1,98 @@
+name: Distribute Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger the workflow for tags like v1.0, v2.1, etc.
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up Go environment
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.23'
+
+      # Install necessary build tools for cgo and osslsigncode
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ libc6-dev gcc-multilib g++-x86-64-linux-gnu osslsigncode openssl
+
+      # Get the version from the tag
+      - name: Get version from tag
+        id: get_version
+        run: |
+          echo "VERSION=$(echo ${GITHUB_REF} | sed 's/refs\/tags\///')" >> $GITHUB_ENV
+
+      # Get the repository name from the GitHub context
+      - name: Get repo name
+        id: get_repo_name
+        run: |
+          REPO_NAME=$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2)
+          echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_ENV
+          echo "Repository name: ${REPO_NAME}"
+
+      # Build binaries
+      - name: Build binaries
+        if: env.skip != 'true'
+        run: |
+          GOOS_ARCH_LIST=( "windows/386" "windows/amd64" "windows/arm" "windows/arm64" )
+          VERSION=${{ env.VERSION }}
+          REPO_NAME=${{ env.REPO_NAME }}
+          mkdir -p binaries
+          for GOOS_ARCH in "${GOOS_ARCH_LIST[@]}"; do
+            GOOS=$(echo $GOOS_ARCH | cut -d'/' -f1)
+            GOARCH=$(echo $GOOS_ARCH | cut -d'/' -f2)
+            FILENAME="${REPO_NAME}-${VERSION}-${GOOS}-${GOARCH}.exe"
+            export GOOS GOARCH CGO_ENABLED=0
+            go build -ldflags "-X main.name=${REPO_NAME} -X main.version=${VERSION}" -o "binaries/${FILENAME}"
+            echo "Built binary: ${FILENAME}"
+          done
+
+      # Prepare the signing certificate (Generate .p12 file)
+      - name: Prepare signing certificate
+        run: |
+          # Decode the PRIVATE_KEY secret and save it to a file
+          echo "${{ secrets.PRIVATE_KEY }}" > private.key
+
+          # Decode the REQUEST_CSR secret and save it to a file
+          echo "${{ secrets.REQUEST_CSR }}" > request.csr
+
+          # Decode the SIGN_PASSWORD secret and save it to a file
+          echo "${{ secrets.SIGN_PASSWORD }}" > sign_password.txt
+
+          # Create the .p12 certificate using the private key and certificate (self-signed or CA-signed)
+          openssl pkcs12 -export -out certificate.p12 -inkey private.key -in request.csr -passout file:sign_password.txt
+
+          # Clean up sensitive files after use
+          rm private.key request.csr sign_password.txt
+
+      # Sign Windows binaries
+      - name: Sign Windows binaries
+        run: |
+          mkdir -p signed
+          for FILE in binaries/*.exe; do
+            SIGNED_FILE="signed/$(basename $FILE)"
+            osslsigncode sign \
+              -pkcs12 certificate.p12 \
+              -pass "${{ secrets.SIGN_PASSWORD }}" \
+              -t http://timestamp.digicert.com \
+              -in "$FILE" \
+              -out "$SIGNED_FILE"
+            echo "Signed binary: $SIGNED_FILE"
+          done
+
+      # Upload signed binaries to GitHub Releases
+      - name: Upload signed binaries to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: signed/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
