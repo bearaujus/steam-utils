@@ -52,10 +52,8 @@ jobs:
           openssl dgst -sha256 -sign private.key -out myapp.sig myapp
 
       - name: Upload Signed Binary, Certificate, and Signature
-        uses: actions/upload-artifact@v2
+        uses: softprops/action-gh-release@v1
         with:
-          name: signed-binary-and-cert
-          path: |
-            myapp
-            myapp.sig
-            myapp-cert.pem
+          files: myapp myapp.sig myapp-cert.pem
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
