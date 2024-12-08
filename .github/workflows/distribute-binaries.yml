@@ -36,20 +36,7 @@ jobs:
           REQUEST_CSR: ${{ secrets.REQUEST_CSR }}
           SIGN_PASSWORD: ${{ secrets.SIGN_PASSWORD }}
         run: |
-          # Decode the PRIVATE_KEY secret and save it to a file
-          echo "${PRIVATE_KEY}" > private.key
-
-          # Decode the REQUEST_CSR secret and save it to a file
-          echo "${REQUEST_CSR}" > request.csr
-
-          # Decode the SIGN_PASSWORD secret and save it to a file
-          echo "${SIGN_PASSWORD}" > sign_password.txt
-
-          # Create the .p12 certificate using the private key and certificate (self-signed or CA-signed)
-          openssl pkcs12 -export -out certificate.p12 -inkey private.key -in request.csr -passout file:sign_password.txt
-
-          # Clean up sensitive files after use
-          rm private.key request.csr sign_password.txt
+          echo "$PRIVATE_KEY" | openssl pkcs12 -export -out certificate.p12 -inkey /dev/stdin -in <(echo "$REQUEST_CSR") -passout pass:"$SIGN_PASSWORD"
 
       # Get the version from the tag
       - name: Get version from tag
