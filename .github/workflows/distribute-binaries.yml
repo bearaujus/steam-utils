@@ -25,16 +25,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc g++ libc6-dev gcc-multilib g++-x86-64-linux-gnu osslsigncode openssl
 
-
-      - name: Prepare signing certificate
-        if: env.skip != 'true'
-        env:
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          REQUEST_CSR: ${{ secrets.REQUEST_CSR }}
-          SIGN_PASSWORD: ${{ secrets.SIGN_PASSWORD }}
-        run: |
-          echo "$PRIVATE_KEY" | openssl pkcs12 -export -out certificate.p12 -inkey /dev/stdin -in <(echo "$REQUEST_CSR") -passout pass:"$SIGN_PASSWORD"
-
       - name: Import Private Key from GitHub Secrets
         if: env.skip != 'true'
         env:
