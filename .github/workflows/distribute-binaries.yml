@@ -54,6 +54,6 @@ jobs:
       - name: Upload Signed Binary, Certificate, and Signature
         uses: softprops/action-gh-release@v1
         with:
-          files: myapp myapp.sig myapp-cert.pem
+          files: myapp
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
