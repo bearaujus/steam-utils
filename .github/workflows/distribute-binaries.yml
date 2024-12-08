@@ -25,6 +25,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc g++ libc6-dev gcc-multilib g++-x86-64-linux-gnu osslsigncode openssl
 
+      - name: Build Go binary
+        run: |
+          GOOS=windows GOARCH=amd64 go build -o myapp .
+
       - name: Import Private Key from GitHub Secrets
         if: env.skip != 'true'
         env:
@@ -38,3 +42,20 @@ jobs:
           REQUEST_CSR_SUBJECT: ${{ secrets.REQUEST_CSR_SUBJECT }}
         run: |
           openssl req -new -key private.key -out request.csr -subj "$REQUEST_CSR_SUBJECT"
+
+      - name: Self-Sign the CSR to Create a Certificate
+        run: |
+          openssl x509 -req -in request.csr -signkey private.key -out myapp-cert.pem
+
+      - name: Sign Binary with Private Key
+        run: |
+          openssl dgst -sha256 -sign private.key -out myapp.sig myapp
+
+      - name: Upload Signed Binary, Certificate, and Signature
+        uses: actions/upload-artifact@v2
+        with:
+          name: signed-binary-and-cert
+          path: |
+            myapp
+            myapp.sig
+            myapp-cert.pem
