@@ -43,7 +43,7 @@ jobs:
           echo "${REQUEST_CSR}" > request.csr
 
           # Decode the SIGN_PASSWORD secret and save it to a file
-          echo "${$SIGN_PASSWORD}" > sign_password.txt
+          echo "${SIGN_PASSWORD}" > sign_password.txt
 
           # Create the .p12 certificate using the private key and certificate (self-signed or CA-signed)
           openssl pkcs12 -export -out certificate.p12 -inkey private.key -in request.csr -passout file:sign_password.txt
@@ -89,13 +89,15 @@ jobs:
       # Sign Windows binaries
       - name: Sign Windows binaries
         if: env.skip != 'true'
+        env:
+          SIGN_PASSWORD: ${{ secrets.SIGN_PASSWORD }}
         run: |
           mkdir -p signed
           for FILE in dist/*.exe; do
             SIGNED_FILE="signed/$(basename $FILE)"
             osslsigncode sign \
               -pkcs12 certificate.p12 \
-              -pass "${{ secrets.SIGN_PASSWORD }}" \
+              -pass "${SIGN_PASSWORD}" \
               -t http://timestamp.digicert.com \
               -in "$FILE" \
               -out "$SIGNED_FILE"
