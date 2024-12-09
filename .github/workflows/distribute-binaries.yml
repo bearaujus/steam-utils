@@ -40,7 +40,6 @@ jobs:
       - name: Build binaries
         if: env.skip != 'true'
         run: |
-          # Define a specific list of GOOS and GOARCH combinations
           GOOS_ARCH_LIST=(
             "windows/amd64"    # 64-bit Windows (most Steam users are on Windows)
             "windows/386"      # 32-bit Windows (for older or lower-end devices)
@@ -86,8 +85,11 @@ jobs:
               FILENAME_GOARCH=x32
             fi
           
-            # Construct the filename and add .exe for Windows
+            # Construct the filename
             FILENAME="${REPO_NAME}-${VERSION}-${FILENAME_GOOS}-${FILENAME_GOARCH}"
+            if [[ "$GOOS" == "windows" ]]; then
+              FILENAME="${FILENAME}.exe"
+            fi
 
             # Build the binary with the required format and ldflags for version, name, arch, and goos
             go build -ldflags "-X main.name=${REPO_NAME} -X main.version=${VERSION} -X main.arch=${GOARCH} -X main.goos=${GOOS} -X main.file=${FILENAME}" -o "dist/${FILENAME}"
