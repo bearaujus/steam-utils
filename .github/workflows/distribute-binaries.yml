@@ -47,7 +47,6 @@ jobs:
             "linux/amd64"      # 64-bit Linux (commonly used by Steam users on Linux)
             "linux/386"        # 32-bit Linux (for older or low-resource Linux devices)
             "darwin/amd64"     # 64-bit macOS (used by some Steam users on macOS)
-            "darwin/386"       # 32-bit macOS (less common, but still used by some legacy systems)
           )
 
           VERSION=${{ env.VERSION }}
