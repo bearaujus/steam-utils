@@ -35,7 +35,7 @@ Available Options:
 
 Manage background download preferences for all collections in your Steam library:
 
-Available Commands:
+Available Options:
 - Follow your global Steam settings
 - Always allow background downloads
 - Never allow background downloads
