@@ -12,7 +12,14 @@ To get started with steam-utils, visit the release page at:
 ```shell
 https://github.com/bearaujus/steam-utils/releases
 ```
-From there, download the binary that matches your operating system and architecture listed under the desired release version.
+From there, you can download the binary that matches with your operating system that listed under your desired release version.
+
+## Mode
+### A. Interactive Mode (Windows Only)
+![image](https://github.com/user-attachments/assets/0c51ff15-3134-4256-a2b2-42428145862c)
+
+### B. CLI Mode
+![image](https://github.com/user-attachments/assets/434808fa-4f77-4efe-895b-120d6533fe29)
 
 ## Usage
 
@@ -20,28 +27,18 @@ From there, download the binary that matches your operating system and architect
 
 Control how games in your Steam library are updated:
 
-```shell
-steam-utils library set-auto-update [command]
-```
-
-Available Commands:
-
-- 0 : Always keep all games updated automatically
-- 1 : Update a game only when you launch it
+Available Options:
+- Always keep all games updated automatically
+- Update a game only when you launch it
 
 ### B. Set Background Downloads Behavior
 
 Manage background download preferences for all collections in your Steam library:
 
-```shell
-steam-utils library set-background-downloads [command]
-```
-
 Available Commands:
-
-- 0 : Follow your global Steam settings
-- 1 : Always allow background downloads
-- 2 : Never allow background downloads
+- Follow your global Steam settings
+- Always allow background downloads
+- Never allow background downloads
 
 ## TODO
 
